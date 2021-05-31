@@ -27,7 +27,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "VariableContrastLed.h"
+#include "string.h"
+#include "stdio.h"
+#include "math.h"
+#include "usbd_hid.h"
+#include "UsbKeyboard.h"
+#include "map"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +43,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+// HID Media
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,6 +55,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE END PV */
 
@@ -101,11 +110,24 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  VariableContrastLed	backgroundLed(&htim3, TIM_CHANNEL_1, 0);
+  VariableContrastLed	powerLed(&htim4, TIM_CHANNEL_3, 0);
+
+  uint32_t ledToggleTime = HAL_GetTick();
+
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if(HAL_GetTick() - ledToggleTime > 1000){
+
+		  ledToggleTime = HAL_GetTick();
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -156,7 +178,34 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+std::map<uint16_t, GPIO_TypeDef *> keysMap = {
+		{KEY1_Pin, KEY1_GPIO_Port},
+		{KEY2_Pin, KEY2_GPIO_Port},
+		{KEY3_Pin, KEY3_GPIO_Port},
+		{KEY4_Pin, KEY4_GPIO_Port},
+		{KEY5_Pin, KEY5_GPIO_Port},
+		{KEY6_Pin, KEY6_GPIO_Port},
+		{KEY7_Pin, KEY7_GPIO_Port},
+		{KEY8_Pin, KEY8_GPIO_Port},
+		{KEY9_Pin, KEY9_GPIO_Port},
+		{KEY10_Pin, KEY10_GPIO_Port},
+		{KEY11_Pin, KEY11_GPIO_Port},
+		{KEY12_Pin, KEY12_GPIO_Port},
+		{KEY13_Pin, KEY13_GPIO_Port},
+		{KEY14_Pin, KEY14_GPIO_Port},
+		{KEY15_Pin, KEY15_GPIO_Port},
+};
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	char tmpStr[100];
+	if(HAL_GPIO_ReadPin(keysMap[GPIO_Pin], GPIO_Pin) == GPIO_PIN_RESET){
+		//falling
+		sprintf(tmpStr, "falling --> %d\r\n", GPIO_Pin);
+	}else{
+		//rising
+		sprintf(tmpStr, "rising --> %d\r\n", GPIO_Pin);
+	}
+	HAL_UART_Transmit(&huart5, (uint8_t *)tmpStr, strlen(tmpStr), 1000);
+}
 /* USER CODE END 4 */
 
 /**
