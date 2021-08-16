@@ -49,26 +49,32 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, KEY_DATA_A_Pin|KEY_DATA_B_Pin|KEY_DATA_C_Pin|MODE0_Pin
-                          |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin, GPIO_PIN_RESET);
+//  HAL_GPIO_WritePin(GPIOC, KEY_DATA_A_Pin|KEY_DATA_B_Pin|KEY_DATA_C_Pin|MODE0_Pin
+//                          |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, MODE0_Pin
+                            |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, KEY_DATA_D_Pin|MODE1_Pin, GPIO_PIN_RESET);
+  //HAL_GPIO_WritePin(GPIOA, KEY_DATA_D_Pin|MODE1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, MODE1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, AIS_PWR_CTRL_Pin|LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PCPin PCPin PCPin PCPin
                            PCPin PCPin PCPin */
-  GPIO_InitStruct.Pin = KEY_DATA_A_Pin|KEY_DATA_B_Pin|KEY_DATA_C_Pin|MODE0_Pin
-                          |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin;
+//  GPIO_InitStruct.Pin = KEY_DATA_A_Pin|KEY_DATA_B_Pin|KEY_DATA_C_Pin|MODE0_Pin
+//                          |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin;
+  GPIO_InitStruct.Pin = MODE0_Pin
+                            |POWER_CTRL_3V3_Pin|POWER_CTRL_5V_Pin|POWER_CTRL_3V8_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PAPin PAPin */
-  GPIO_InitStruct.Pin = KEY_DATA_D_Pin|MODE1_Pin;
+  //GPIO_InitStruct.Pin = KEY_DATA_D_Pin|MODE1_Pin;
+  GPIO_InitStruct.Pin = MODE1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

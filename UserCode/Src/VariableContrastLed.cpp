@@ -8,12 +8,14 @@
 #include "VariableContrastLed.h"
 #include "math.h"
 
-VariableContrastLed::VariableContrastLed(TIM_HandleTypeDef *timer, uint32_t channel, uint16_t contrast) {
+VariableContrastLed::VariableContrastLed(TIM_HandleTypeDef *timer, uint32_t channel,
+		uint16_t contrast, uint32_t OCPolarity) {
 	// TODO Auto-generated constructor stub
 	//TODO check the parameter
 	mTimer = timer;
 	mContrast = contrast;
 	mChannel = channel;
+	mOcPolarity = OCPolarity;
 
 	HAL_TIM_Base_Start(mTimer);
 	HAL_TIM_PWM_Start(mTimer, mChannel);
@@ -46,7 +48,7 @@ void VariableContrastLed::setPulseWidth(void) {
 
 	sConfigOC.OCMode = TIM_OCMODE_PWM1;
 	sConfigOC.Pulse = mContrast;
-	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCPolarity = mOcPolarity;
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 	HAL_TIM_PWM_Stop(mTimer, mChannel);
 	if (HAL_TIM_PWM_ConfigChannel(mTimer, &sConfigOC, mChannel) != HAL_OK)

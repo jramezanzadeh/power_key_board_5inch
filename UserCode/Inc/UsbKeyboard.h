@@ -7,10 +7,16 @@
 
 #ifndef USBKEYBOARD_H_
 #define USBKEYBOARD_H_
+
 #include "usbd_hid.h"
 #include "stdint.h"
+#include "map"
+#include "Observable.h"
+#include "KeyObserver.h"
 
-class UsbKeyboard {
+#define BUFF_SIZE 5
+
+class UsbKeyboard: public Observable<KeyObserver> {
 public:
 	// USB media codes
 	enum UsbMediaCodes{
@@ -135,13 +141,8 @@ public:
 		USB_HID_KEYPAD_PERIOD    	= 0x63,
 	};
 
-	enum KeyEventType{
-		KEY_PRESSED = 0,
-		KEY_RELEASED = 1,
-	};
-
 	virtual ~UsbKeyboard();
-	static UsbKeyboard instance();
+	static UsbKeyboard& instance();
 	void init(USBD_HandleTypeDef* usbDevice);
 	void handleKeyEvent(int keyId, KeyEventType eventType);
 	void run(void);
@@ -166,14 +167,26 @@ private:
 		uint8_t key3;
 	} KeyboardHID_t;
 
-	USBD_HandleTypeDef* mUsbDevice;
+	typedef struct{
+		uint8_t 		keyId;
+		KeyEventType	type;
+	}event_t;
+
+	USBD_HandleTypeDef* 				mUsbDevice;
+	std::map<uint8_t, uint8_t> 	mKeysMap;
+	event_t								mEventList[BUFF_SIZE];
+	int									mReadIndex;
+	volatile int						mWriteIndex;
 
 	UsbKeyboard();
 	void sendMediaKey(uint8_t key);
 	void sendStandardKey(uint8_t modifier, uint8_t key1, uint8_t key2 = 0, uint8_t key3 = 0);
+	void sendStandardKey(KeyboardHID_t *key);
 	void releaseMediaKey();
 	void releaseStandardKey();
 	void releaseAllKey();
+	bool isEventExist();
+	void notify();
 
 };
 
