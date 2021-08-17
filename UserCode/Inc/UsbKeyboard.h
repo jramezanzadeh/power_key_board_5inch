@@ -149,6 +149,10 @@ public:
 
 
 private:
+	enum State{
+		IDLE = 0,
+		WAIT_POLLING_INTERVAL
+	};
 	enum{
 		KEYBOARD_REPORT_ID	= 1,
 		MEDIA_REPORT_ID		= 2,
@@ -156,7 +160,7 @@ private:
 	typedef struct  {
 		uint8_t id;
 		uint8_t keys;
-	} MediaHID_t;
+	}__attribute__((packed)) MediaHID_t;
 
 	// HID Keyboard
 	typedef struct  {
@@ -165,18 +169,23 @@ private:
 		uint8_t key1;
 		uint8_t key2;
 		uint8_t key3;
-	} KeyboardHID_t;
+	}__attribute__((packed)) KeyboardHID_t;
 
 	typedef struct{
 		uint8_t 		keyId;
 		KeyEventType	type;
 	}event_t;
 
+	KeyboardHID_t 						keyReport;
+	MediaHID_t 							mediaReport;
 	USBD_HandleTypeDef* 				mUsbDevice;
-	std::map<uint8_t, uint8_t> 	mKeysMap;
+	std::map<uint8_t, uint8_t> 			mKeysMap;
 	event_t								mEventList[BUFF_SIZE];
 	int									mReadIndex;
 	volatile int						mWriteIndex;
+	uint32_t							mPollingInterval;
+	uint32_t							mStartPollingTime;
+	State								mState;
 
 	UsbKeyboard();
 	void sendMediaKey(uint8_t key);
@@ -187,6 +196,9 @@ private:
 	void releaseAllKey();
 	bool isEventExist();
 	void notify();
+	void sendBuff(uint8_t*buff, int len);
+	void handleBufferedKey();
+	bool isPollingTimeElapsed();
 
 };
 

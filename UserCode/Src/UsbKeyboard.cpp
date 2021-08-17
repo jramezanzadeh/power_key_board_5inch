@@ -13,6 +13,10 @@ UsbKeyboard::UsbKeyboard() {
 	mUsbDevice = 0;
 	mReadIndex = 0;
 	mWriteIndex = 0;
+	mState = IDLE;
+	mPollingInterval = 0;
+	mStartPollingTime = 0;
+
 
 	mKeysMap[Key_GOTO] 		= USB_HID_KEY_F8; 		//Goto/Find
 	mKeysMap[Key_WayPoint] 	= USB_HID_KEY_F9;		// WP/Mark
@@ -38,25 +42,22 @@ UsbKeyboard::~UsbKeyboard() {
 }
 
 void UsbKeyboard::sendMediaKey(uint8_t key) {
-	MediaHID_t mediaReport;
+
 	mediaReport.id = MEDIA_REPORT_ID;
 	mediaReport.keys = key;
 
-	//TODO handle Errors
-	USBD_HID_SendReport(mUsbDevice, (uint8_t*)&mediaReport, sizeof(MediaHID_t));
+	sendBuff((uint8_t*)&mediaReport, sizeof(MediaHID_t));
 }
 
 void UsbKeyboard::sendStandardKey(uint8_t modifier, uint8_t key1, uint8_t key2,
 		uint8_t key3) {
-	KeyboardHID_t keyReport;
 	keyReport.id = KEYBOARD_REPORT_ID;
 	keyReport.modifiers = modifier;
 	keyReport.key1 = key1;
 	keyReport.key2 = key2;
 	keyReport.key3 = key3;
 
-	//TODO handle Errors
-	USBD_HID_SendReport(mUsbDevice, (uint8_t*)&keyReport, sizeof(KeyboardHID_t));
+	sendBuff((uint8_t*)&keyReport, sizeof(KeyboardHID_t));
 }
 
 void UsbKeyboard::releaseMediaKey() {
@@ -69,6 +70,7 @@ void UsbKeyboard::releaseStandardKey() {
 
 void UsbKeyboard::releaseAllKey() {
 	releaseMediaKey();
+	HAL_Delay(mPollingInterval);
 	releaseStandardKey();
 }
 
@@ -78,7 +80,11 @@ UsbKeyboard& UsbKeyboard::instance() {
 }
 
 void UsbKeyboard::init(USBD_HandleTypeDef* usbDevice) {
+	if(!usbDevice)
+		return;
 	mUsbDevice = usbDevice;
+	mPollingInterval = USBD_HID_GetPollingInterval(mUsbDevice);
+
 }
 
 void UsbKeyboard::handleKeyEvent(int keyId, KeyEventType eventType) {
@@ -90,31 +96,23 @@ void UsbKeyboard::handleKeyEvent(int keyId, KeyEventType eventType) {
 }
 
 void UsbKeyboard::run(void) {
-
-	if(isEventExist()){
-		// TODO do it in a cleaner way
-		switch (mEventList[mReadIndex].type) {
-		case KEY_PRESSED:
-			sendStandardKey(0, mKeysMap[mEventList[mReadIndex].keyId]);
-			Debug::getInstance().log("press key[%d]\r\n", mEventList[mReadIndex].keyId);
+	//TODO: return if it isn't initialized correctly
+	switch (mState) {
+		case IDLE:
+			if(isEventExist())
+				handleBufferedKey();
 			break;
-		case KEY_RELEASED:
-			releaseStandardKey();
-			Debug::getInstance().log("release key[%d]\r\n", mEventList[mReadIndex].keyId);
+		case WAIT_POLLING_INTERVAL:
+			if(isPollingTimeElapsed())
+				mState = IDLE;
 			break;
 		default:
-			Debug::getInstance() << "unhandled\r\n";
 			break;
-		}
-		notify();
-		mReadIndex++;
-		mReadIndex %= BUFF_SIZE;
 	}
 }
 
 void UsbKeyboard::sendStandardKey(KeyboardHID_t* key) {
-	//TODO handle Errors
-	USBD_HID_SendReport(mUsbDevice, (uint8_t*)key, sizeof(KeyboardHID_t));
+	sendBuff((uint8_t*)key, sizeof(KeyboardHID_t));
 }
 
 bool UsbKeyboard::isEventExist() {
@@ -124,4 +122,35 @@ bool UsbKeyboard::isEventExist() {
 void UsbKeyboard::notify() {
 	for(int i = 0; i < (int)mObserverList.size(); i++)
 		mObserverList[i]->keyEvent(mEventList[mReadIndex].keyId, mEventList[mReadIndex].type);
+}
+
+void UsbKeyboard::sendBuff(uint8_t* buff, int len) {
+
+	//TODO handle Errors
+	USBD_HID_SendReport(mUsbDevice, buff, len);
+	mState = WAIT_POLLING_INTERVAL;
+	mStartPollingTime = HAL_GetTick();
+}
+
+void UsbKeyboard::handleBufferedKey() {
+	switch (mEventList[mReadIndex].type) {
+	case KEY_PRESSED:
+		sendStandardKey(0, mKeysMap[mEventList[mReadIndex].keyId]);
+		Debug::getInstance().log("press key[%d]\r\n", mEventList[mReadIndex].keyId);
+		break;
+	case KEY_RELEASED:
+		releaseStandardKey();
+		Debug::getInstance().log("release key[%d]\r\n", mEventList[mReadIndex].keyId);
+		break;
+	default:
+		Debug::getInstance() << "unhandled\r\n";
+		break;
+	}
+	notify();
+	mReadIndex++;
+	mReadIndex %= BUFF_SIZE;
+}
+
+bool UsbKeyboard::isPollingTimeElapsed() {
+	return (HAL_GetTick() - mStartPollingTime > mPollingInterval);
 }
