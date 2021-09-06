@@ -144,6 +144,8 @@ int main(void)
 	Debug::getInstance() << "Starting application ...\r\n";
 	uint32_t ledToggleTime = HAL_GetTick();
 
+	//HAL_I2C_EnableListen_IT()
+
 	while (1)
 	{
 		/* USER CODE END WHILE */
