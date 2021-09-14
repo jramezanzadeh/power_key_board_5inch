@@ -21,7 +21,7 @@ enum MkdPowerState{
 class MkdPowerController: public StateObserver, public KeyObserver {
 public:
 	MkdPowerController(GpioHandler* pwr3V3Ctrl, GpioHandler* pwr5VCtrl,
-			VariableContrastLed* ledPower);
+			VariableContrastLed* ledPower, VariableContrastLed* bgLed);
 	virtual ~MkdPowerController();
 
 	void run();
@@ -38,11 +38,12 @@ private:
 	GpioHandler* 			mPwr3V3Ctrl;
 	GpioHandler* 			mPwr5VCtrl;
 	VariableContrastLed* 	mLedPower;
-	bool					isInputPwrPresent;
-	bool					isPowerKeyPressed;
-	uint32_t				keyPressedTime;
-	uint32_t				lastIncreasingContrastTime;
-	uint8_t					ledContrastPercentage;
+	VariableContrastLed* 	mBgLed;
+	bool					mIsInputPwrPresent;
+	bool					mIsPowerKeyPressed;
+	uint32_t				mKeyPressedTime;
+	uint32_t				mLastIncreasingContrastTime;
+	uint8_t					mLedContrastPercentage;
 
 	void mkdPowerOn();
 	void mkdPowerOff();

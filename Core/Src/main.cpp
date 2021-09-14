@@ -39,6 +39,7 @@
 #include "AisPowerController.h"
 #include "KeyObserver.h"
 #include "MkdPowerController.h"
+#include "CommandListener.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -132,34 +133,32 @@ int main(void)
 
 	GpioHandler			mkd5VPwrCtrl(POWER_CTRL_5V_GPIO_Port, POWER_CTRL_5V_Pin);
 	GpioHandler			mkd3V3PwrCtrl(POWER_CTRL_3V3_GPIO_Port, POWER_CTRL_3V3_Pin);
-//	mkd5VPwrCtrl.setHigh();
-//	mkd3V3PwrCtrl.setHigh();
-//	while(1);
-	VariableContrastLed	powerLed(&htim4, TIM_CHANNEL_3,0, TIM_OCPOLARITY_LOW);
-	MkdPowerController 	mkdPowerController(&mkd3V3PwrCtrl, &mkd5VPwrCtrl, &powerLed);
+	VariableContrastLed	powerLed(&htim4, TIM_CHANNEL_3, 0, TIM_OCPOLARITY_LOW);
+	VariableContrastLed	bgLed(&htim3, TIM_CHANNEL_1, 0, TIM_OCPOLARITY_HIGH);
+	MkdPowerController 	mkdPowerController(&mkd3V3PwrCtrl, &mkd5VPwrCtrl, &powerLed, &bgLed);
 	powerStateMonitor.addObserver(mkdPowerController);
 	UsbKeyboard::instance().addObserver(mkdPowerController);
 
+	CommandListener  cmdListener(&bgLed);
 
 	Debug::getInstance() << "Starting application ...\r\n";
-	uint32_t ledToggleTime = HAL_GetTick();
 
-	//HAL_I2C_EnableListen_IT()
+	uint32_t ledToggleTime = HAL_GetTick();
 
 	while (1)
 	{
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		if(HAL_GetTick() - ledToggleTime > 1000){
+		if(HAL_GetTick() - ledToggleTime > 2000){
 
 			ledToggleTime = HAL_GetTick();
-			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		}
 
 		UsbKeyboard::instance().run();
 		powerStateMonitor.run();
 		mkdPowerController.run();
+		cmdListener.run();
 
 	}
 	/* USER CODE END 3 */
@@ -212,38 +211,52 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 extern "C"{
-	typedef struct{
-		uint8_t 		id;
-		GPIO_TypeDef 	*port;
-	} KeyInfoType;
-	std::map<uint16_t, KeyInfoType> keysMap = {
-			{KEY1_Pin, {Key_GOTO, 		KEY1_GPIO_Port}},
-			{KEY2_Pin, {Key_WayPoint, 	KEY2_GPIO_Port}},
-			{KEY3_Pin, {Key_Plus, 		KEY3_GPIO_Port}},
-			{KEY4_Pin, {Key_Page, 		KEY4_GPIO_Port}},
-			{KEY5_Pin, {Key_Minus, 		KEY5_GPIO_Port}},
-			{KEY6_Pin, {Key_Right, 		KEY6_GPIO_Port}},
-			{KEY7_Pin, {Key_UP, 		KEY7_GPIO_Port}},
-			{KEY8_Pin, {Key_OK, 		KEY8_GPIO_Port}},
-			{KEY9_Pin, {Key_Down, 		KEY9_GPIO_Port}},
-			{KEY10_Pin, {Key_Left, 		KEY10_GPIO_Port}},
-			{KEY11_Pin, {Key_Alt, 		KEY11_GPIO_Port}},
-			{KEY12_Pin, {Key_Menu, 		KEY12_GPIO_Port}},
-			{KEY13_Pin, {Key_Esc, 		KEY13_GPIO_Port}},
-			{KEY14_Pin, {Key_MOB, 		KEY14_GPIO_Port}},
-			{KEY15_Pin, {Key_Power, 	KEY15_GPIO_Port}},
-	};
+typedef struct{
+	uint8_t 		id;
+	GPIO_TypeDef 	*port;
+} KeyInfoType;
+std::map<uint16_t, KeyInfoType> keysMap = {
+		{KEY1_Pin, {Key_GOTO, 		KEY1_GPIO_Port}},
+		{KEY2_Pin, {Key_WayPoint, 	KEY2_GPIO_Port}},
+		{KEY3_Pin, {Key_Plus, 		KEY3_GPIO_Port}},
+		{KEY4_Pin, {Key_Page, 		KEY4_GPIO_Port}},
+		{KEY5_Pin, {Key_Minus, 		KEY5_GPIO_Port}},
+		{KEY6_Pin, {Key_Right, 		KEY6_GPIO_Port}},
+		{KEY7_Pin, {Key_UP, 		KEY7_GPIO_Port}},
+		{KEY8_Pin, {Key_OK, 		KEY8_GPIO_Port}},
+		{KEY9_Pin, {Key_Down, 		KEY9_GPIO_Port}},
+		{KEY10_Pin, {Key_Left, 		KEY10_GPIO_Port}},
+		{KEY11_Pin, {Key_Alt, 		KEY11_GPIO_Port}},
+		{KEY12_Pin, {Key_Menu, 		KEY12_GPIO_Port}},
+		{KEY13_Pin, {Key_Esc, 		KEY13_GPIO_Port}},
+		{KEY14_Pin, {Key_MOB, 		KEY14_GPIO_Port}},
+		{KEY15_Pin, {Key_Power, 	KEY15_GPIO_Port}},
+};
 
-	void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
-		if(HAL_GPIO_ReadPin(keysMap[GPIO_Pin].port, GPIO_Pin) == GPIO_PIN_RESET){
-			//falling
-			UsbKeyboard::instance().handleKeyEvent(keysMap[GPIO_Pin].id, KEY_PRESSED);
-		}else{
-			//rising
-			UsbKeyboard::instance().handleKeyEvent(keysMap[GPIO_Pin].id, KEY_RELEASED);
-		}
+	if(HAL_GPIO_ReadPin(keysMap[GPIO_Pin].port, GPIO_Pin) == GPIO_PIN_RESET){
+		//falling
+		UsbKeyboard::instance().handleKeyEvent(keysMap[GPIO_Pin].id, KEY_PRESSED);
+	}else{
+		//rising
+		UsbKeyboard::instance().handleKeyEvent(keysMap[GPIO_Pin].id, KEY_RELEASED);
 	}
+}
+
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c){
+	if(hi2c->Instance == I2C1){
+		Debug::getInstance() << "I2C1 Data Received\r\n";
+	}else if(hi2c->Instance == I2C2){
+
+	}
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
+	if(hi2c->ErrorCode != HAL_I2C_ERROR_NONE)
+		Debug::getInstance() << "I2C Error[" <<hi2c->ErrorCode << "]\r\n";
+}
+
 }
 /* USER CODE END 4 */
 

@@ -38,6 +38,13 @@ uint32_t Helper::fromBigEndianArray(uint8_t* buff, int len) {
 	return data;
 }
 
+uint8_t Helper::calcCRC(uint8_t *buff, int len){
+	uint8_t crc = 0;
+	for(int i = 0; i < len; i++)
+		crc = crc ^ buff[i];
+	return crc;
+}
+
 //uint16_t Helper::fromBigEndianArray(uint8_t* buff) {
 //	uint16_t data;
 //	data  = (uint16_t)buff[0] << 8;

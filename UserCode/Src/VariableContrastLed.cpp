@@ -38,8 +38,9 @@ void VariableContrastLed::setContrast(uint16_t contrast) {
 
 void VariableContrastLed::setContrastPercentage(uint8_t percentage) {
 	if(percentage > 100) percentage = 100;
-	percentage /= 10;
-	mContrast = 63*(pow(2, percentage) - 1);
+//	percentage /= 10;
+//	mContrast = 63*(pow(2, percentage) - 1);
+	mContrast = mTimer->Init.Period*percentage/100;
 	setPulseWidth();
 }
 

@@ -8,17 +8,19 @@
 #include "MkdPowerController.h"
 
 MkdPowerController::MkdPowerController(GpioHandler* pwr3V3Ctrl,
-		GpioHandler* pwr5VCtrl, VariableContrastLed* ledPower) {
+		GpioHandler* pwr5VCtrl, VariableContrastLed* ledPower,
+		VariableContrastLed* bgLed) {
 	// TODO Auto-generated constructor stub
 	mPwr3V3Ctrl = pwr3V3Ctrl;
 	mPwr5VCtrl = pwr5VCtrl;
 	mLedPower = ledPower;
+	mBgLed = bgLed;
 	mPowerState = OFF;
-	isInputPwrPresent = false;
-	isPowerKeyPressed = false;
-	keyPressedTime = 0;
-	lastIncreasingContrastTime = 0;
-	ledContrastPercentage = 0;
+	mIsInputPwrPresent = false;
+	mIsPowerKeyPressed = false;
+	mKeyPressedTime = 0;
+	mLastIncreasingContrastTime = 0;
+	mLedContrastPercentage = 0;
 	mkdPowerOff();
 }
 
@@ -30,27 +32,27 @@ void MkdPowerController::stateChanged(PowerState state) {
 	switch (state) {
 	case POWER_DOWN:
 	case POWER_ON_BATT:
-		isPowerKeyPressed = false;
-		isInputPwrPresent = false;
+		mIsPowerKeyPressed = false;
+		mIsInputPwrPresent = false;
 		mkdPowerOff();
 		break;
 	case POWER_ON_INPUT:
 	case POWER_ON_BOTH:
-		ledContrastPercentage = 0;
-		lastIncreasingContrastTime = HAL_GetTick();
-		isInputPwrPresent = true;
+		mLedContrastPercentage = 0;
+		mLastIncreasingContrastTime = HAL_GetTick();
+		mIsInputPwrPresent = true;
 		break;
 	}
 }
 
 void MkdPowerController::keyEvent(uint8_t keyID, KeyEventType eventType) {
-	if(isInputPwrPresent){
+	if(mIsInputPwrPresent){
 		if(keyID == Key_Power){
 			if(eventType == KEY_PRESSED){
-				keyPressedTime = HAL_GetTick(); // capture event time
-				isPowerKeyPressed = true;
+				mKeyPressedTime = HAL_GetTick(); // capture event time
+				mIsPowerKeyPressed = true;
 			}else{
-				isPowerKeyPressed = false;
+				mIsPowerKeyPressed = false;
 			}
 		}
 	}
@@ -58,26 +60,26 @@ void MkdPowerController::keyEvent(uint8_t keyID, KeyEventType eventType) {
 
 void MkdPowerController::run() {
 	// handle power key press
-	if(isPowerKeyPressed){
+	if(mIsPowerKeyPressed){
 		if(mPowerState == ON){
-			if(HAL_GetTick() - keyPressedTime > 3000){ // check whether press time is more than 3 seconds or not
-				isPowerKeyPressed = false;
+			if(HAL_GetTick() - mKeyPressedTime > 3000){ // check whether press time is more than 3 seconds or not
+				mIsPowerKeyPressed = false;
 				mkdPowerOff();
 			}
 		}else{
 			// power on MKD immediately
-			isPowerKeyPressed = false;
+			mIsPowerKeyPressed = false;
 			mkdPowerOn();
 		}
 	}
 	//handle periodically increasing power led's contrast
 	//TODO write it in a clear way
-	if(isInputPwrPresent && (mPowerState == OFF)){
-		if(HAL_GetTick() - lastIncreasingContrastTime > 500){
-			lastIncreasingContrastTime = HAL_GetTick();
-			ledContrastPercentage += 10;
-			ledContrastPercentage %= 101;
-			mLedPower->setContrastPercentage(ledContrastPercentage);
+	if(mIsInputPwrPresent && (mPowerState == OFF)){
+		if(HAL_GetTick() - mLastIncreasingContrastTime > 500){
+			mLastIncreasingContrastTime = HAL_GetTick();
+			mLedContrastPercentage += 10;
+			mLedContrastPercentage %= 101;
+			mLedPower->setContrastPercentage(mLedContrastPercentage);
 		}
 	}
 }
@@ -87,8 +89,8 @@ void MkdPowerController::mkdPowerOn() {
 	mPwr3V3Ctrl->setHigh();
 	mPwr5VCtrl->setHigh();
 
-	ledContrastPercentage = 100;
-	mLedPower->setContrastPercentage(ledContrastPercentage);
+	mLedContrastPercentage = 100;
+	mLedPower->setContrastPercentage(mLedContrastPercentage);
 	//HAL_Delay(100); //TODO when the mkd is turned on, 5V power will oscillate(why???)
 
 }
@@ -98,8 +100,9 @@ void MkdPowerController::mkdPowerOff() {
 	mPwr3V3Ctrl->setLow();
 	mPwr5VCtrl->setLow();
 
-	ledContrastPercentage = 0;
-	mLedPower->setContrastPercentage(ledContrastPercentage);
-	lastIncreasingContrastTime = HAL_GetTick();
+	mLedContrastPercentage = 0;
+	mLedPower->setContrastPercentage(mLedContrastPercentage);
+	mLastIncreasingContrastTime = HAL_GetTick();
+	mBgLed->setContrastPercentage(0);
 
 }
